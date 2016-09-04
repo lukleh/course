@@ -213,7 +213,7 @@ flattenAgain ::
   List (List a)
   -> List a
 flattenAgain =
-  flatten
+  flatMap id
 
 -- | Convert a list of optional values to an optional list of values.
 --
@@ -246,6 +246,7 @@ seqOptional ::
 --        f Empty _ = Empty
 --        f (Full a) (Full t) = Full (a :. t)
 -- somehow convoluted solution from Tony, need to digest that
+-- next day, new understanding. it actually makes a lot of sense, to use applicative in this case
 seqOptional =
   foldRight (twiceOptional (:.)) (Full Nil)
 
