@@ -61,8 +61,7 @@ infixl 4 <*>
   (a -> b)
   -> f a
   -> f b
-(<$>) =
-  error "todo: Course.Applicative#(<$>)"
+x <$> f = pure x <*> f -- (<*>) . pure
 
 -- | Insert into Id.
 --
@@ -74,15 +73,12 @@ instance Applicative Id where
   pure ::
     a
     -> Id a
-  pure =
-    error "todo: Course.Applicative pure#instance Id"
+  pure = Id
   (<*>) :: 
     Id (a -> b)
     -> Id a
     -> Id b
-  (<*>) =
-    error "todo: Course.Applicative (<*>)#instance Id"
-
+  (<*>) (Id fab) (Id a) = Id (fab a)
 -- | Insert into a List.
 --
 -- prop> pure x == x :. Nil
@@ -93,14 +89,15 @@ instance Applicative List where
   pure ::
     a
     -> List a
-  pure =
-    error "todo: Course.Applicative pure#instance List"
+  pure a = a :. Nil
   (<*>) ::
     List (a -> b)
     -> List a
     -> List b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance List"
+  Nil <*> _ = Nil
+  _ <*> Nil = Nil
+  (fab :. t) <*> l = (map fab l) ++ (t <*> l)  -- tried to use <$>, stack overflow :(, anyway f <*> a = flatMap (`map` a) f 
+  --f <*> a = flatMap (`map` a) f
 
 -- | Insert into an Optional.
 --
@@ -118,14 +115,14 @@ instance Applicative Optional where
   pure ::
     a
     -> Optional a
-  pure =
-    error "todo: Course.Applicative pure#instance Optional"
+  pure = Full
   (<*>) ::
     Optional (a -> b)
     -> Optional a
     -> Optional b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance Optional"
+  Empty <*> _ = Empty
+  _ <*> Empty = Empty
+  Full fab <*> Full a = Full (fab a) -- well, don't remember those from Optional - bindOptional (`mapOptional` a) f
 
 -- | Insert into a constant function.
 --
@@ -149,14 +146,12 @@ instance Applicative ((->) t) where
   pure ::
     a
     -> ((->) t a)
-  pure =
-    error "todo: Course.Applicative pure#((->) t)"
+  pure = const -- always return the first argument
   (<*>) ::
     ((->) t (a -> b))
     -> ((->) t a)
     -> ((->) t b)
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance ((->) t)"
+  (<*>) f g x = f x (g x) -- nice reply on SO http://stackoverflow.com/a/11811057, the official version is neater f <*> g = \t -> f t (g t)
 
 
 -- | Apply a binary function in the environment.
@@ -184,8 +179,7 @@ lift2 ::
   -> f a
   -> f b
   -> f c
-lift2 =
-  error "todo: Course.Applicative#lift2"
+lift2 f fa fb = (<$>) f fa <*> fb -- well, quite the same f <$> a <*> b
 
 -- | Apply a ternary function in the environment.
 --
@@ -216,8 +210,7 @@ lift3 ::
   -> f b
   -> f c
   -> f d
-lift3 =
-  error "todo: Course.Applicative#lift3"
+lift3 f fa fb fc = lift2 f fa fb <*> fc -- nice substitution for: fmap f fa <*> fb <*> fc, I think I peaked in...
 
 -- | Apply a quaternary function in the environment.
 --
@@ -249,8 +242,7 @@ lift4 ::
   -> f c
   -> f d
   -> f e
-lift4 =
-  error "todo: Course.Applicative#lift4"
+lift4 f fa fb fc fd = lift3 f fa fb fc <*> fd
 
 -- | Apply, discarding the value of the first argument.
 -- Pronounced, right apply.
@@ -275,8 +267,7 @@ lift4 =
   f a
   -> f b
   -> f b
-(*>) =
-  error "todo: Course.Applicative#(*>)"
+(*>) fa fb = (<$>) (flip const) fa <*> fb -- cool - (*>) = lift2 (const id)
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -301,8 +292,7 @@ lift4 =
   f b
   -> f a
   -> f b
-(<*) =
-  error "todo: Course.Applicative#(<*)"
+(<*) fa fb = (<$>) const fa <*> fb  -- handy lift2 again: lift2 const
 
 -- | Sequences a list of structures to a structure of list.
 --
@@ -324,8 +314,7 @@ sequence ::
   Applicative f =>
   List (f a)
   -> f (List a)
-sequence =
-  error "todo: Course.Applicative#sequence"
+sequence = foldRight (lift2 (:.)) (pure Nil) -- I got the same thing!! yay - foldRight (lift2 (:.)) (pure Nil)
 
 -- | Replicate an effect a given number of times.
 --
@@ -348,8 +337,7 @@ replicateA ::
   Int
   -> f a
   -> f (List a)
-replicateA =
-  error "todo: Course.Applicative#replicateA"
+replicateA n a = sequence $ replicate n a -- yeah, I can drop the "a", sequence . replicate n, I have to write out why (.) goes only with one argument - #1
 
 -- | Filter a list with a predicate that produces an effect.
 --
@@ -376,8 +364,7 @@ filtering ::
   (a -> f Bool)
   -> List a
   -> f (List a)
-filtering =
-  error "todo: Course.Applicative#filtering"
+filtering f = foldRight (\a -> lift2 (\b -> if b then (a:.) else id) (f a)) (pure Nil) -- copy of Tony. DAMN! lift2 again! I did not know how to get the Bool from Applicative, and gues what, I fo not need to do that of course (this happens to me often)
 
 -----------------------
 -- SUPPORT LIBRARIES --
