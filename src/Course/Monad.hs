@@ -68,8 +68,13 @@ infixr 1 =<<
   f (a -> b)
   -> f a
   -> f b
-(<*>) =
-  error "todo: Course.Monad#(<*>)"
+
+-- (<*>) fab fa = (=<<) (\a -> (=<<) (\ab -> return (ab a)) fab) fa
+-- (<*>) fab fa = (\a -> (\ab -> return (ab a)) =<< fab) =<< fa
+(<*>) fab fa = (\ab -> (\a -> return (ab a)) =<< fa) =<< fab
+-- #2 TODO: not completely sure why the order of parameters matter, but it does. 
+-- f <*> a = (\f' -> return . f' =<< a) =<< f
+
 
 infixl 4 <*>
 
@@ -82,8 +87,7 @@ instance Monad Id where
     (a -> Id b)
     -> Id a
     -> Id b
-  (=<<) =
-    error "todo: Course.Monad (=<<)#instance Id"
+  (=<<) f (Id a) = f a
 
 -- | Binds a function on a List.
 --
@@ -94,8 +98,8 @@ instance Monad List where
     (a -> List b)
     -> List a
     -> List b
-  (=<<) =
-    error "todo: Course.Monad (=<<)#instance List"
+  (=<<) _ Nil = Nil
+  (=<<) f l = flatMap f l
 
 -- | Binds a function on an Optional.
 --
