@@ -110,8 +110,8 @@ instance Monad Optional where
     (a -> Optional b)
     -> Optional a
     -> Optional b
-  (=<<) =
-    error "todo: Course.Monad (=<<)#instance Optional"
+  (=<<) f (Full a) = f a
+  (=<<) _ Empty = Empty
 
 -- | Binds a function on the reader ((->) t).
 --
@@ -122,8 +122,8 @@ instance Monad ((->) t) where
     (a -> ((->) t b))
     -> ((->) t a)
     -> ((->) t b)
-  (=<<) =
-    error "todo: Course.Monad (=<<)#instance ((->) t)"
+  (=<<) f a = \t -> (f $ a t) t
+  -- (=<<) f a = \t -> (\at -> f at t) (a t) - not sure about the precedence
 
 -- | Flattens a combined structure to a single structure.
 --
@@ -142,8 +142,7 @@ join ::
   Monad f =>
   f (f a)
   -> f a
-join =
-  error "todo: Course.Monad#join"
+join f = id =<< f 
 
 -- | Implement a flipped version of @(=<<)@, however, use only
 -- @join@ and @(<$>)@.
@@ -156,8 +155,7 @@ join =
   f a
   -> (a -> f b)
   -> f b
-(>>=) =
-  error "todo: Course.Monad#(>>=)"
+(>>=) a f = join $ f <$> a
 
 infixl 1 >>=
 
@@ -172,8 +170,7 @@ infixl 1 >>=
   -> (a -> f b)
   -> a
   -> f c
-(<=<) =
-  error "todo: Course.Monad#(<=<)"
+(<=<) fc fb = \a -> fc =<< (fb a) 
 
 infixr 1 <=<
 
